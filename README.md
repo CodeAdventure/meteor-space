@@ -23,14 +23,14 @@ If an object needs some other code during runtime, it simply declares its
 **dependency**:
 
 ```javascript
-var dependendObject = {
+var dependentObject = {
   Dependencies: { lib: 'OtherCode' },
   sayHello: function() { this.lib.sayHello(); }
 };
 ```
 *I use a very dense coding style here to keep these examples short*
 
-Now `dependendObject` declares very explicitly that it needs `OtherCode`
+Now `dependentObject` declares very explicitly that it needs `OtherCode`
 which it will access via `this.lib` later on. But where should `OtherCode`
 come from?
 
@@ -43,9 +43,9 @@ var injector = new Space.Injector();
 // maps the string identifier 'OtherCode' to the library object
 injector.map('OtherCode').to(library);
 // injects all dependencies into the dependent object
-injector.injectInto(dependendObject);
+injector.injectInto(dependentObject);
 
-dependendObject.sayHello(); // logs: 'hello!'
+dependentObject.sayHello(); // logs: 'hello!'
 ```
 
 Of course, this also works with Javascript constructors and prototypes:
@@ -112,11 +112,11 @@ var app = Space.Application.create({
   configure: function () {
     // every app has its own injector by default
     this.injector.map('ExternalLib').to(SomeLibrary);
-    this.injector.map('MyDependendClass').toSingleton(MyClass);
+    this.injector.map('MyDependentClass').toSingleton(MyClass);
   },
   startup: function() {
     // Create the singleton instance of my class
-    this.injector.create('MyDependendClass');
+    this.injector.create('MyDependentClass');
   }
 });
 
@@ -129,7 +129,7 @@ to express the above:
 ```javascript
 var app = Space.Application.create({
   // Let the framework map and create the singleton instances for you
-  Singletons: ['MyDependendClass', 'MyOtherSingleton']
+  Singletons: ['MyDependentClass', 'MyOtherSingleton']
 });
 app.start(); // You decide when your app starts
 ```
@@ -290,7 +290,7 @@ features that `space:base` provides for you.
 `meteor add space:base`
 
 ## Run the tests
-`mrt test-packages ./`
+`meteor test-packages ./`
 
 ## Release History
 You find all release changes in the [changelog](https://github.com/CodeAdventure/meteor-space/blob/master/CHANGELOG.md)
