@@ -1,5 +1,7 @@
 Changelog
 =========
+### 4.0.2
+- `Space.Struct` were previously not calling their super constructor which caused a bug with the new `onConstruction` hooks
 
 ### 4.0.1
 
