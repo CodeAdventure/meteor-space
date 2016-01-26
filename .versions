@@ -28,7 +28,7 @@ html-tools@1.0.5
 htmljs@1.0.5
 id-map@1.0.4
 jquery@1.11.4
-local-test:space:base@4.0.1
+local-test:space:base@4.0.2
 localstorage@1.0.5
 logging@1.0.8
 meteor@1.1.10
@@ -52,7 +52,7 @@ retry@1.0.4
 routepolicy@1.0.6
 service-configuration@1.0.5
 session@1.1.1
-space:base@4.0.1
+space:base@4.0.2
 space:testing@3.0.1
 spacebars@1.0.7
 spacebars-compiler@1.0.7
