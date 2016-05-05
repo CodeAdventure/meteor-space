@@ -79,7 +79,6 @@ Package.onTest(function(api) {
     'email',
     'session',
     'reactive-var',
-    'grigio:babel@0.1.3',
     'practicalmeteor:munit@2.1.5',
     'space:testing@3.0.1'
   ]);
