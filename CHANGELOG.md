@@ -1,5 +1,8 @@
 Changelog
 =========
+## Next
+- Removes deprecated `grigio:babel@0.1.3` meteor dependency. It was causing errors related to long or failed builds (like: `Cannot enlarge memory arrays`)
+
 ## 4.1.3
 - Fixes the BDD test helper on `Space.Module` and `Space.Application` to actually accept a second param that can be a existing app instance.
 
@@ -257,7 +260,7 @@ of defining `run: function() { … }` you need `startup: function() { … }` ins
 
 ### 1.4.2
 Make it possible to declare `Singletons: []` on any module with paths to classes
-that should be mapped and created as singletons automatically.  
+that should be mapped and created as singletons automatically.
 
 ### 1.4.1
 Fixes some package dependency issues
