@@ -8,7 +8,6 @@ Package.describe({
 
 Npm.depends({
   "getenv": "0.5.0",
-  "winston": "2.1.0",
   "babel-plugin-transform-decorators-legacy": "1.3.4"
 });
 
@@ -49,7 +48,9 @@ Package.onUse(function(api) {
     'source/injector.coffee',
     'source/injector_annotations.coffee',
     'source/module.coffee',
-    'source/application.coffee'
+    'source/application.coffee',
+    'source/loggers/adapter.js',
+    'source/loggers/console-adapter.js',
   ]);
 
   // Test helpers

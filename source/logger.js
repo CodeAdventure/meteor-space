@@ -1,104 +1,100 @@
-let config = Space.configuration;
+const Logger = Space.Object.extend('Space.Logger', {
 
-if (Meteor.isServer) {
-  winston = Npm.require('winston');
-}
-
-Space.Object.extend(Space, 'Logger', {
-
-  _logger: null,
-  _minLevel: 6,
-  _state: 'stopped',
-
-  _levels: {
-    'error': 3,
-    'warning': 4,
-    'warn': 4,
-    'info': 6,
-    'debug': 7
+  STATES: {
+    stopped: 'stopped',
+    running: 'running'
   },
 
   Constructor() {
-    if (Meteor.isServer) {
-      this._logger = new winston.Logger({
-        transports: [
-          new winston.transports.Console({
-            colorize: true,
-            prettyPrint: true
-          })
-        ]
-      });
-      this._logger.setLevels(winston.config.syslog.levels);
-    }
-    if (Meteor.isClient) {
-      this._logger = console;
-    }
+    this._state = this.STATES.stopped;
+    this._adapters = {};
   },
 
-  setMinLevel(name) {
-    let newCode = this._levelCode(name);
-    if (this._minLevel !== newCode) {
-      this._minLevel = newCode;
-      if (Meteor.isServer) {
-        this._logger.transports.console.level = name;
-      }
+  addAdapter(id, adapter, shouldOverride = false) {
+    if (!id || typeof id !== 'string') {
+      throw new Error(this.constructor.ERRORS.invalidId);
     }
+    if (this.hasAdapter(id) && !shouldOverride) {
+      throw new Error(this.constructor.ERRORS.mappingExists(id));
+    }
+    this._adapters[id] = adapter;
+  },
+
+  overrideAdapter(id, adapter) {
+    return this.addAdapter(id, adapter, true);
+  },
+
+  getAdapter(id) {
+    return this._adapters[id] || null;
+  },
+
+  hasAdapter(id) {
+    return (this._adapters[id] !== null && this._adapters[id] !== undefined);
+  },
+
+  removeAdapter(id) {
+    if (this._adapters[id]) {delete this._adapters[id];}
+  },
+
+  getAdapters() {
+    return this._adapters;
   },
 
   start() {
-    if (this._is('stopped')) {
-      this._state = 'running';
+    if (this.isInState(this.STATES.stopped)) {
+      this._state = this.STATES.running;
     }
   },
 
   stop() {
-    if (this._is('running')) {
-      this._state = 'stopped';
+    if (this.isInState(this.STATES.running)) {
+      this._state = this.STATES.stopped;
     }
   },
 
-  debug(message) {
-    check(message, String);
-    this._log('debug', arguments);
+  debug(...args) {
+    this._log('debug', args);
   },
 
-  info(message) {
-    check(message, String);
-    this._log('info', arguments);
+  info(...args) {
+    this._log('info', args);
   },
 
-  warning(message) {
-    check(message, String);
-    if (Meteor.isClient)
-      this._log('warn', arguments);
-    if (Meteor.isServer)
-      this._log('warning', arguments);
+  warning(...args) {
+    this._log('warning', args);
   },
 
-  error(message) {
-    check(message, String);
-    this._log('error', arguments);
+  error(...args) {
+    this._log('error', args);
   },
 
-  _levelCode(name) {
-    return this._levels[name];
+  isInState(expectedState) {
+    return (this._state === expectedState);
   },
 
-  _is(expectedState) {
-    if (this._state === expectedState) return true;
+  isRunning() {
+    return this.isInState(this.STATES.running);
   },
 
-  _log(level, message) {
-    if(this._is('running') && this._levelCode(level) <= this._minLevel) {
-      this._logger[level].apply(this._logger, message);
+  isStopped() {
+    return this.isInState(this.STATES.stopped);
+  },
+
+  _log(level, args) {
+    if (!this.isInState(this.STATES.running)) {return;}
+
+    for (let adapter of Object.values(this.getAdapters())) {
+      adapter[level].apply(adapter, args);
     }
   }
-
 });
 
-Space.log = new Space.Logger();
+Logger.ERRORS =  {
+  mappingExists(id) {
+    return `Adapter with id '${id}' would be overwritten. Use method
+    'overrideAdapter' for that`;
+  },
+  invalidId: 'Cannot map <null> or <undefined> or non string values'
+};
 
-if (config.log.enabled) {
-  Space.log.setMinLevel(config.log.minLevel);
-  Space.log.start();
-}
+export default Logger;

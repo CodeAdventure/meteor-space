@@ -103,6 +103,7 @@ describe 'Space.Module - #start', ->
 
   beforeEach ->
     @module = new Space.Module()
+    @module.log = {debug: sinon.spy()}
     @module.start()
     @module._runLifeCycleAction = sinon.spy()
 
@@ -117,6 +118,7 @@ describe 'Space.Module - #stop', ->
 
   beforeEach ->
     @module = new Space.Module()
+    @module.log = {debug: sinon.spy()}
     @module.start()
     @module.stop()
     @module._runLifeCycleAction = sinon.spy()
@@ -132,6 +134,7 @@ describe 'Space.Module - #reset', ->
 
   beforeEach ->
     @module = new Space.Module()
+    @module.log = {debug: sinon.spy()}
     @module._runLifeCycleAction = sinon.spy()
 
   it.server 'rejects attempts to reset when in production', ->

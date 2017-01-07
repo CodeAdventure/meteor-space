@@ -1,112 +1,203 @@
-describe("Space.Logger", function() {
+import Logger from '../../source/logger.js';
+import LoggingAdapter from '../../source/loggers/adapter.js';
 
-  beforeEach(function() {
-    this.log = new Space.Logger();
+const TestAdapter = LoggingAdapter.extend('TestAdapter', {
+  Constructor(lib) {
+    return this.setLibrary(lib);
+  }
+});
+
+describe("Logger", function() {
+
+  beforeEach(() => {
+    this.lib = {
+      debug: sinon.spy(),
+      info: sinon.spy(),
+      warning: sinon.spy(),
+      error: sinon.spy()
+    };
+    this.testAdapter = new TestAdapter(this.lib);
+    this.logger = new Logger();
   });
 
-  afterEach(function() {
-    this.log.stop();
+  it('extends Space.Object', () => {
+    expect(Logger).to.extend(Space.Object);
   });
 
-  it('extends Space.Object', function() {
-    expect(Space.Logger).to.extend(Space.Object);
+  it("is available of both client and server", () => {
+    expect(this.logger).to.be.instanceOf(Logger);
   });
 
-  it("is available of both client and server", function() {
-    if (Meteor.isServer || Meteor.isClient)
-      expect(this.log).to.be.instanceOf(Space.Logger);
+  describe('adapters', () => {
+    it('throws error if id does not exists', () => {
+      const adapter = new TestAdapter(sinon.spy());
+      expect(() => this.logger.addAdapter(undefined, adapter)).to.throw(
+        Logger.ERRORS.invalidId
+      );
+    });
+
+    it('throws error if id is not a string value', () => {
+      const adapter = new TestAdapter(sinon.spy());
+      expect(() => this.logger.addAdapter(adapter)).to.throw(
+        Logger.ERRORS.invalidId
+      );
+    });
+
+    it('throws error if adapter would be overridden', () => {
+      const adapterId = 'testAdapter';
+      const adapter = new TestAdapter(sinon.spy());
+
+      this.logger.addAdapter(adapterId, adapter);
+      expect(() => this.logger.addAdapter(adapterId, adapter)).to.throw(
+        Logger.ERRORS.mappingExists(adapterId)
+      );
+    });
+
+    it('adds adapter', () => {
+      const adapterId = 'testAdapter';
+      const adapter = new TestAdapter(sinon.spy());
+
+      this.logger.addAdapter(adapterId, adapter);
+      expect(this.logger.getAdapter(adapterId)).to.equal(adapter);
+      expect(this.logger.hasAdapter(adapterId)).to.be.true;
+    });
+
+    it('allows to override adapter', () => {
+      const adapterId = 'testAdapter';
+      const adapter = new TestAdapter(sinon.spy());
+      const overridingAdapter = new TestAdapter(sinon.spy());
+
+      this.logger.addAdapter(adapterId, adapter);
+      expect(() => {
+        this.logger.overrideAdapter(adapterId, overridingAdapter);
+      }).to.not.throw(Error);
+      expect(this.logger.getAdapter(adapterId)).to.equal(overridingAdapter);
+    });
+
+    it('resolves adapter by id', () => {
+      consoleAdapter = new TestAdapter(sinon.spy());
+      fileAdapter = new TestAdapter(sinon.spy());
+
+      this.logger.addAdapter('console', consoleAdapter);
+      this.logger.addAdapter('file', fileAdapter);
+      expect(this.logger.getAdapter('console')).to.equal(consoleAdapter);
+      expect(this.logger.getAdapter('file')).to.equal(fileAdapter);
+      expect(this.logger.getAdapter('non-existing-adapter')).to.be.null;
+    });
+
+    it('removes adapter', () => {
+      const adapterId = 'testAdapter';
+      const adapter = new TestAdapter(sinon.spy());
+
+      this.logger.addAdapter(adapterId, adapter);
+      this.logger.removeAdapter(adapterId);
+      expect(this.logger.getAdapter(adapterId)).to.be.null;
+      expect(this.logger.hasAdapter(adapterId)).to.be.false;
+    });
+
+    it('returns adapters', () => {
+      const adapters = {
+        console: new TestAdapter(sinon.spy()),
+        file: new TestAdapter(sinon.spy())
+      };
+      this.logger.addAdapter('console', adapters.console);
+      this.logger.addAdapter('file',  adapters.file);
+      expect(this.logger.getAdapters()).to.be.eql(adapters);
+    });
   });
 
-  it("only logs after starting", function() {
-    this.log.start();
-    this.log._logger.info = sinon.spy();
-    let message = 'My Log Message';
-    this.log.info(message);
-    expect(this.log._logger.info).to.be.calledWithExactly(message);
+  it("only logs after starting", () => {
+    this.logger.addAdapter('my-logger', this.testAdapter);
+    const message = 'My log message';
+
+    expect(this.logger.isRunning()).to.be.false;
+    expect(this.logger.isStopped()).to.be.true;
+    this.logger.info(message);
+    expect(this.lib.info).to.not.be.called;
+
+    this.logger.start();
+    expect(this.logger.isRunning()).to.be.true;
+    expect(this.logger.isStopped()).to.be.false;
+    this.logger.info(message);
+    expect(this.lib.info).to.be.calledOnce;
+    expect(this.lib.info.calledWith(message)).to.be.true;
   });
 
-  it("it can log a debug message to the output channel when min level is equal but not less", function() {
-    this.log.start();
-    this.log.setMinLevel('debug');
-    this.log._logger.debug = sinon.spy();
-    let message = 'My log message';
-    this.log.debug(message);
-    expect(this.log._logger.debug).to.be.calledWithExactly(message);
-    this.log._logger.debug = sinon.spy();
-    this.log.setMinLevel('info');
-    this.log.debug(message);
-    expect(this.log._logger.debug).not.to.be.called;
+  it("allows logging output to be stopped", () => {
+    this.logger.addAdapter('my-logger', this.testAdapter);
+    const message = 'My log message';
+
+    expect(this.logger.isRunning()).to.be.false;
+    expect(this.logger.isStopped()).to.be.true;
+    this.logger.start();
+    expect(this.logger.isRunning()).to.be.true;
+    expect(this.logger.isStopped()).to.be.false;
+    this.logger.info(message);
+    expect(this.lib.info.calledWith(message)).to.be.true;
+
+    this.logger.stop();
+    expect(this.logger.isRunning()).to.be.false;
+    expect(this.logger.isStopped()).to.be.true;
+
+    this.logger.info(message);
+    expect(this.lib.info).to.not.be.calledTwice;
   });
 
-  it("it can log an info message to the output channel when min level is equal or higher, but not less", function() {
-    this.log.start();
-    this.log.setMinLevel('info');
-    this.log._logger.info = sinon.spy();
-    this.log._logger.debug = sinon.spy();
-    let message = 'My log message';
-    this.log.info(message);
-    expect(this.log._logger.info).to.be.calledWithExactly(message);
-    expect(this.log._logger.debug).not.to.be.called;
-    this.log._logger.info = sinon.spy();
-    this.log.setMinLevel('warning');
-    this.log.info(message);
-    expect(this.log._logger.info).not.to.be.called;
-  });
+  describe('logging', () => {
+    it('allows multiple logging adapters to log same message', () => {
+      const firstLib = {debug: sinon.spy()};
+      const firstAdapter = new TestAdapter(firstLib);
+      const secondLib = {debug: sinon.spy()};
+      const secondAdapter = new TestAdapter(secondLib);
+      const message = 'My log message';
 
-  it.server("it can log a warning message to the output channel when min level is equal or higher, but not less", function() {
-    this.log.start();
-    this.log.setMinLevel('warning');
-    this.log._logger.warning = sinon.spy();
-    this.log._logger.info = sinon.spy();
-    let message = 'My log message';
-    this.log.warning(message);
-    expect(this.log._logger.warning).to.be.calledWithExactly(message);
-    expect(this.log._logger.info).not.to.be.called;
-    this.log._logger.warning = sinon.spy();
-    this.log.setMinLevel('error');
-    this.log.warning(message);
-    expect(this.log._logger.warning).not.to.be.called;
-  });
+      this.logger.addAdapter('first', firstAdapter);
+      this.logger.addAdapter('second', secondAdapter);
+      this.logger.start();
 
-  it.client("it can log a warning message to the output channel when min level is equal or higher, but not less", function() {
-    this.log.start();
-    this.log.setMinLevel('warning');
-    this.log._logger.warn = sinon.spy();
-    this.log._logger.info = sinon.spy();
-    let message = 'My log message';
-    this.log.warning(message);
-    expect(this.log._logger.warn).to.be.calledWithExactly(message);
-    expect(this.log._logger.info).not.to.be.called;
-    this.log._logger.warn = sinon.spy();
-    this.log.setMinLevel('error');
-    this.log.warning(message);
-    expect(this.log._logger.warn).not.to.be.called;
-  });
+      this.logger.debug(message);
+      expect(firstLib.debug.calledWith(message)).to.be.true;
+      expect(firstLib.debug).to.be.calledOnce;
+      expect(secondLib.debug.calledWith(message)).to.be.true;
+      expect(secondLib.debug).to.be.calledOnce;
+    });
 
-  it("it can log an error message to the output channel when min level is equal", function() {
-    this.log.start();
-    this.log.setMinLevel('error');
-    this.log._logger.error = sinon.spy();
-    this.log._logger.info = sinon.spy();
-    let message = 'My log message';
-    this.log.error(message);
-    expect(this.log._logger.error).to.be.calledWithExactly(message);
-    expect(this.log._logger.info).not.to.be.called;
-    this.log._logger.info = sinon.spy();
-    this.log.setMinLevel('debug');
-    this.log.error(message);
-    expect(this.log._logger.error).to.be.calledWithExactly(message);
-  });
+    describe('logs message as', () => {
+      it("debug", () => {
+        this.logger.addAdapter('my-logger', this.testAdapter);
+        this.logger.start();
 
-  it("allows logging output to be stopped", function() {
-    this.log._logger.info = sinon.spy();
-    this.log.start();
-    expect(this.log._is('running')).to.be.true;
-    this.log.stop();
-    let message = 'My Log Message';
-    this.log.info(message);
-    expect(this.log._logger.info).not.to.be.called;
-    expect(this.log._is('stopped')).to.be.true;
-  });
+        const message = 'My log message';
+        this.logger.debug(message);
+        expect(this.lib.debug.calledWith(message)).to.be.true;
+      });
 
+      it("info", () => {
+        this.logger.addAdapter('my-logger', this.testAdapter);
+        this.logger.start();
+
+        const message = 'My log message';
+        this.logger.info(message);
+        expect(this.lib.info.calledWith(message)).to.be.true;
+      });
+
+      it("warning", () => {
+        this.logger.addAdapter('my-logger', this.testAdapter);
+        this.logger.start();
+
+        const message = 'My log message';
+        this.logger.warning(message);
+        expect(this.lib.warning.calledWith(message)).to.be.true;
+      });
+
+      it("error", () => {
+        this.logger.addAdapter('my-logger', this.testAdapter);
+        this.logger.start();
+
+        const message = 'My log message';
+        this.logger.error(message);
+        expect(this.lib.error.calledWith(message)).to.be.true;
+      });
+    });
+  });
 });
